@@ -41,7 +41,7 @@ namespace ConversationsRaiseSpeechcraft
             dial.Responses.Add(groupGetter.Select(i => i.DeepCopy()));
         }
 
-        private static IFormLinkGetter<IMessageGetter> ConstructMessage(ISkyrimMod patchMod)
+        private static IFormLink<IMessageGetter> ConstructMessage(ISkyrimMod patchMod)
         {
             var mesg = new Message(patchMod)
             {
@@ -52,7 +52,7 @@ namespace ConversationsRaiseSpeechcraft
             return mesg.ToLink<IMessageGetter>();
         }
 
-        private static IFormLinkGetter<IQuestGetter> ConstructQuest(ISkyrimMod patchMod, int dialCount)
+        private static IFormLink<IQuestGetter> ConstructQuest(ISkyrimMod patchMod, int dialCount)
         {
             var qust = new Quest(patchMod)
             {
@@ -78,7 +78,7 @@ namespace ConversationsRaiseSpeechcraft
             return qust.ToLink<IQuestGetter>();
         }
 
-        private static IFormLinkGetter<IGlobalGetter> ConstructGlobal(ISkyrimMod patchMod)
+        private static IFormLink<IGlobalGetter> ConstructGlobal(ISkyrimMod patchMod)
         {
             var glob = new GlobalShort(patchMod)
             {
@@ -87,7 +87,6 @@ namespace ConversationsRaiseSpeechcraft
             };
             return glob.ToLink<IGlobalGetter>();
         }
-
 
         private static void PatchInfo(DialogResponses info, IFormLink<IMessageGetter> mesg, IFormLink<IQuestGetter> qust, IFormLink<IGlobalGetter> glob)
         {
@@ -131,21 +130,19 @@ namespace ConversationsRaiseSpeechcraft
                 subrecordCount += group.Count;
             Console.WriteLine($"Found {subrecordCount} INFO subrecords to be patched");
 
-
-
-
-
-
+            var message = ConstructMessage(patchMod);
+            var quest = ConstructQuest(patchMod, dialogTopicRecords.Count);
+            var global = ConstructGlobal(patchMod);
 
             foreach (var record in dialogTopicRecords)
             {
-                Console.WriteLine($"Patching {record.FormKey}");
                 var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
                 PackageInfoOverrides(ref dial, groupRecords);
                 var grup = dial.Responses;
+                Console.WriteLine($"Patching {grup.Count} INFO subrecords in {record.FormKey}");
+                foreach (var info in grup)
+                    PatchInfo(info, message, quest, global);
             }
-
-
         }
     }
 }
