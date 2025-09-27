@@ -1,11 +1,9 @@
 {
-  "Nickname": "",
+  "Nickname": "ConversationsRaiseSpeechcraft",
   "Visibility": "Visible",
-  "OneLineDescription": "",
-  "LongDescription": "",
+  "OneLineDescription": "A patcher to implement Conversations Raise Speechcraft ",
+  "LongDescription": "A patcher for Skyrim: Special Edition to implement Conversations Raise Speechcraft using Synthesis",
   "PreferredAutoVersioning": "Default",
   "RequiredMods": [],
-  "TargetedReleases": [
-    "SkyrimSE"
-  ]
+  "TargetedReleases": ["SkyrimSE", "SkyrimVR", "SkyrimSEGog"]
 }
