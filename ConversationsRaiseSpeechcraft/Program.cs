@@ -21,17 +21,54 @@ namespace ConversationsRaiseSpeechcraft
         {
             return await SynthesisPipeline.Instance
                 .AddPatch<ISkyrimMod, ISkyrimModGetter>(RunPatch)
-                .SetTypicalOpen(GameRelease.SkyrimSE, "Conversations Raise Speechcraft.esp")
+                .SetTypicalOpen(GameRelease.SkyrimSE, "CRS.esp")
                 .Run(args);
         }
 
-        private static List<IDialogResponsesGetter> CollectGroups(IEnumerable<IDialogTopicGetter> dialCollection)
+        private static bool EditorIDFilter(IDialogTopicGetter record)
         {
-            return [.. dialCollection
-                .Reverse()
+            if (record.EditorID != null &&
+            (record.EditorID.Contains("Decorate")
+            || record.EditorID.Contains("Generic")
+            || record.EditorID.Contains("Shout")
+            || record.EditorID.Contains("Cast"))
+            ) return false;
+            else return true;
+        }
+
+        private static bool NameFilter(IDialogTopicGetter record)
+        {
+            if (record.Name?.String != null &&
+            (!record.Name.String.Contains(' ')
+            || record.Name.String.Contains("(Invisible Continue)")
+            || record.Name.String.Contains("(forcegreet)")
+            || record.Name.String.Contains("(remain silent)"))
+            ) return false;
+            else return true;
+        }
+
+        private static bool DialogFilter(IDialogTopicGetter record)
+        {
+            return record.Responses.Count > 0
+            && (record.Name is not null || record.Responses.Any(i => i.Prompt is not null))
+            && EditorIDFilter(record)
+            && NameFilter(record)
+            && record.Responses.Any(InfoFilter);
+        }
+
+        private static bool InfoFilter(IDialogResponsesGetter info)
+        {
+            return info.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null;
+        }
+
+        private static List<IDialogResponsesGetter> CollectGroups(Mutagen.Bethesda.Plugins.Cache.ILinkCache<ISkyrimMod, ISkyrimModGetter> cache, IDialogTopicGetter record)
+        {
+            var recordCollection = record.FormKey.ToLinkGetter<IDialogTopicGetter>().ResolveAll(cache);
+            return [.. recordCollection
                 .SelectMany(dial => dial.Responses)
                 .GroupBy(info => info.FormKey)
-                .Select(g => g.Last())];
+                .Select(g => g.First())
+                .Where(InfoFilter)];
         }
 
         private static void PackageInfoOverrides(ref DialogTopic dial, Dictionary<FormKey, List<IDialogResponsesGetter>> groups)
@@ -90,7 +127,9 @@ namespace ConversationsRaiseSpeechcraft
 
         private static void PatchInfo(DialogResponses info, IFormLink<IMessageGetter> mesg, IFormLink<IQuestGetter> qust, IFormLink<IGlobalGetter> glob)
         {
-            info.VirtualMachineAdapter?.Scripts.Add(new ScriptEntry
+            info.VirtualMachineAdapter ??= new DialogResponsesAdapter { };
+            info.VirtualMachineAdapter.ScriptFragments ??= new ScriptFragments { };
+            info.VirtualMachineAdapter.Scripts.Add(new ScriptEntry
             {
                 Name = "ANDR_CRS_DialogueXPScript",
                 Flags = 0,
@@ -112,7 +151,7 @@ namespace ConversationsRaiseSpeechcraft
                     Object = glob
                 }]
             });
-            info.VirtualMachineAdapter?.ScriptFragments?.OnEnd = new ScriptFragment
+            info.VirtualMachineAdapter.ScriptFragments?.OnEnd = new ScriptFragment
             {
                 ScriptName = "ANDR_CRS_DialogueXPScript",
                 FragmentName = "Fragment_0"
@@ -123,28 +162,27 @@ namespace ConversationsRaiseSpeechcraft
         {
             var cache = state.LinkCache;
             var patchMod = state.PatchMod;
-            var dialogTopicRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().ToList();
-            var groupRecords = dialogTopicRecords.ToDictionary(
+            var dialRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().Where(DialogFilter).ToList();
+            var groupRecords = dialRecords.ToDictionary(
                 d => d.FormKey,
-                d => CollectGroups(d.FormKey.ToLinkGetter<IDialogTopicGetter>().ResolveAll(cache)));
+                d => CollectGroups(cache, d));
 
-            var modkeys = dialogTopicRecords.Select(r => r.FormKey.ModKey);
-            Console.WriteLine($"Found {dialogTopicRecords.Count} DIAL records in {modkeys.Distinct().Count()} plugins");
+            var modkeys = dialRecords.Select(r => r.FormKey.ModKey);
+            Console.WriteLine($"Found {dialRecords.Count} DIAL records in {modkeys.Distinct().Count()} plugins");
             var subrecordCount = 0;
             foreach (var group in groupRecords.Values)
                 subrecordCount += group.Count;
             Console.WriteLine($"Found {subrecordCount} INFO subrecords to be patched");
 
             var message = ConstructMessage(patchMod);
-            var quest = ConstructQuest(patchMod, dialogTopicRecords.Count);
+            var quest = ConstructQuest(patchMod, dialRecords.Count);
             var global = ConstructGlobal(patchMod);
 
-            foreach (var record in dialogTopicRecords)
+            foreach (var record in dialRecords)
             {
                 var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
                 PackageInfoOverrides(ref dial, groupRecords);
                 var grup = dial.Responses;
-                Console.WriteLine($"Patching {grup.Count} INFO subrecords in {record.FormKey}");
                 foreach (var info in grup)
                     PatchInfo(info, message, quest, global);
             }
