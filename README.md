@@ -18,7 +18,7 @@ This patcher requires the use of Synthesis. A guide to installation and applying
 
 **Please do not ask me for help using Synthesis.** There are plenty of guides on Nexus, GitHub, and Mutagen's Discord.
 
-To use this patcher, the scripts included in [Conversations Raise Speechcraft](https://www.nexusmods.com/skyrimspecialedition/mods/93435) must be installed on your Skyrim: Special Edition client. To install the scripts, download and install the original mod as normal using a mod manager (MO2/Vortex) or manually. Then, deactivate or remove the plugin `Conversations Raise Speechcraft.esp` from your load order. Please note that while the scripts are not required to apply the patcher to your load order in Synthesis, the resulting plugin will not function in game without the scripts.
+To use this patcher, **the scripts included in [Conversations Raise Speechcraft](https://www.nexusmods.com/skyrimspecialedition/mods/93435) must be installed** on your Skyrim: Special Edition client. To install the scripts, download and install the original mod as normal using a mod manager (MO2/Vortex) or manually. Then, deactivate or remove the plugin `Conversations Raise Speechcraft.esp` from your load order. Please note that while the scripts are not required to apply the patcher to your load order in Synthesis, the resulting plugin will not function in game without the scripts.
 
 ## Compatibility
 By leveraging Synthesis, this patcher is nearly weightless and (nominally) compatible with any load order. If you experience errors executing the patcher, please report them so I can try to resolve the issue. I have successfully tested the patcher on my own load order without encountering any issues. 
