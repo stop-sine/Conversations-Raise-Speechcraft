@@ -151,11 +151,12 @@ namespace ConversationsRaiseSpeechcraft
                     Object = glob
                 }]
             });
-            info.VirtualMachineAdapter.ScriptFragments?.OnEnd = new ScriptFragment
-            {
-                ScriptName = "ANDR_CRS_DialogueXPScript",
-                FragmentName = "Fragment_0"
-            };
+            if (info.VirtualMachineAdapter.ScriptFragments != null)
+                info.VirtualMachineAdapter.ScriptFragments.OnEnd = new ScriptFragment
+                {
+                    ScriptName = "ANDR_CRS_DialogueXPScript",
+                    FragmentName = "Fragment_0"
+                };
         }
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
