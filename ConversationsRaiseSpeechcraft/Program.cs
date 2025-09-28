@@ -11,6 +11,7 @@ using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using CommandLine;
 using Mutagen.Bethesda.Plugins.Binary.Headers;
 using Microsoft.VisualBasic.FileIO;
+using DynamicData.Kernel;
 
 namespace ConversationsRaiseSpeechcraft
 {
@@ -28,7 +29,7 @@ namespace ConversationsRaiseSpeechcraft
         private static bool EditorIDFilter(IDialogTopicGetter record)
         {
             if (record.EditorID != null &&
-            (record.EditorID.Contains("Decorate")
+            (record.EditorID.Contains("Generic")
             || record.EditorID.Contains("Generic")
             || record.EditorID.Contains("Shout")
             || record.EditorID.Contains("Cast"))
@@ -74,8 +75,10 @@ namespace ConversationsRaiseSpeechcraft
         private static void PackageInfoOverrides(ref DialogTopic dial, Dictionary<FormKey, List<IDialogResponsesGetter>> groups)
         {
             var groupGetter = groups[dial.FormKey];
+            var allInfos = groups.Values.SelectMany(x => x).ToList();
+            var duplicates = allInfos.Duplicates(x => x.FormKey).ToList();
             dial.Responses.Clear();
-            dial.Responses.Add(groupGetter.Select(i => i.DeepCopy()));
+            dial.Responses.Add(groupGetter.Where(i => !duplicates.Contains(i)).Select(i => i.DeepCopy()));
         }
 
         private static IFormLink<IMessageGetter> ConstructMessage(ISkyrimMod patchMod)
