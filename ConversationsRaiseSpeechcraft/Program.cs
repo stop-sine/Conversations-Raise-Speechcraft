@@ -199,8 +199,7 @@ namespace ConversationsRaiseSpeechcraft
             {
                 var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
                 PackageInfoOverrides(ref dial, groupRecords, duplicates);
-                var grup = dial.Responses;
-                foreach (var info in grup)
+                foreach (var info in dial.Responses)
                     PatchInfo(info, message, quest, global);
             }
         }
