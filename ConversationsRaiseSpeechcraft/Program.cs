@@ -187,12 +187,12 @@ namespace ConversationsRaiseSpeechcraft
             var quest = ConstructQuest(patchMod, dialRecords.Count);
             var global = ConstructGlobal(patchMod);
 
-            foreach (var x in duplicates)
+            if (duplicates.Count != 0)
+                Console.WriteLine("Warning, duplicate records found. These records cannot be patched.");
+            foreach (var formKey in duplicates)
             {
-                var records = groupRecords.Where(y => y.Value.Select(z => z.FormKey).Contains(x)).Select(k => k.Key);
-                Console.WriteLine();
-                Console.WriteLine($"INFO: {x}");
-                records.ForEach(r => Console.WriteLine($"DIAL: {r}"));
+                var records = groupRecords.Where(x => x.Value.Any(y => y.FormKey == formKey)).Select(z => z.Key);
+                Console.WriteLine($"{formKey.IDString()} found in {string.Join(", ", records)}");
             }
 
             foreach (var record in dialRecords)
