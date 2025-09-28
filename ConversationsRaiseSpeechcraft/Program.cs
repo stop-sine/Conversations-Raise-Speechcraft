@@ -187,6 +187,14 @@ namespace ConversationsRaiseSpeechcraft
             var quest = ConstructQuest(patchMod, dialRecords.Count);
             var global = ConstructGlobal(patchMod);
 
+            foreach (var x in duplicates)
+            {
+                var records = groupRecords.Where(y => y.Value.Select(z => z.FormKey).Contains(x)).Select(k => k.Key);
+                Console.WriteLine();
+                Console.WriteLine($"INFO: {x}");
+                records.ForEach(r => Console.WriteLine($"DIAL: {r}"));
+            }
+
             foreach (var record in dialRecords)
             {
                 var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
