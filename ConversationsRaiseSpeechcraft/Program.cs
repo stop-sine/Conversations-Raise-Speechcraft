@@ -30,7 +30,6 @@ namespace ConversationsRaiseSpeechcraft
         {
             if (record.EditorID != null &&
             (record.EditorID.Contains("Generic")
-            || record.EditorID.Contains("Generic")
             || record.EditorID.Contains("Shout")
             || record.EditorID.Contains("Cast"))
             ) return false;
@@ -72,13 +71,11 @@ namespace ConversationsRaiseSpeechcraft
                 .Where(InfoFilter)];
         }
 
-        private static void PackageInfoOverrides(ref DialogTopic dial, Dictionary<FormKey, List<IDialogResponsesGetter>> groups)
+        private static void PackageInfoOverrides(ref DialogTopic dial, Dictionary<FormKey, List<IDialogResponsesGetter>> groups, HashSet<FormKey> duplicates)
         {
             var groupGetter = groups[dial.FormKey];
-            var allInfos = groups.Values.SelectMany(x => x).ToList();
-            var duplicates = allInfos.Duplicates(x => x.FormKey).ToList();
             dial.Responses.Clear();
-            dial.Responses.Add(groupGetter.Where(i => !duplicates.Contains(i)).Select(i => i.DeepCopy()));
+            dial.Responses.Add(groupGetter.Where(i => !duplicates.Contains(i.FormKey)).Select(i => i.DeepCopy()));
         }
 
         private static IFormLink<IMessageGetter> ConstructMessage(ISkyrimMod patchMod)
@@ -162,6 +159,13 @@ namespace ConversationsRaiseSpeechcraft
                 };
         }
 
+        private static HashSet<FormKey> DetectDuplicates(Dictionary<FormKey, List<IDialogResponsesGetter>> groups)
+        {
+            var allInfos = groups.Values.SelectMany(x => x).ToList();
+            var duplicates = allInfos.Duplicates(x => x.FormKey).Select(x => x.FormKey).ToHashSet();
+            return duplicates;
+        }
+
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             var cache = state.LinkCache;
@@ -178,16 +182,24 @@ namespace ConversationsRaiseSpeechcraft
                 subrecordCount += group.Count;
             Console.WriteLine($"Found {subrecordCount} INFO subrecords to be patched");
 
+            var duplicates = DetectDuplicates(groupRecords);
             var message = ConstructMessage(patchMod);
             var quest = ConstructQuest(patchMod, dialRecords.Count);
             var global = ConstructGlobal(patchMod);
 
+            if (duplicates.Count != 0)
+                Console.WriteLine("Warning, duplicate records found. These records cannot be patched.");
+            foreach (var formKey in duplicates)
+            {
+                var records = groupRecords.Where(x => x.Value.Any(y => y.FormKey == formKey)).Select(z => z.Key);
+                Console.WriteLine($"{formKey.IDString()} found in {string.Join(", ", records)}");
+            }
+
             foreach (var record in dialRecords)
             {
                 var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
-                PackageInfoOverrides(ref dial, groupRecords);
-                var grup = dial.Responses;
-                foreach (var info in grup)
+                PackageInfoOverrides(ref dial, groupRecords, duplicates);
+                foreach (var info in dial.Responses)
                     PatchInfo(info, message, quest, global);
             }
         }
