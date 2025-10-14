@@ -50,7 +50,7 @@ namespace ConversationsRaiseSpeechcraft
         private static bool DialogFilter(IDialogTopicGetter record)
         {
             return record.Responses.Count > 0
-            && (record.Name is not null || record.Responses.Any(i => i.Prompt is not null))
+            && (record.Name is not null || record.Responses.Any(i => i.Prompt is not null && i.Prompt?.String != " "))
             && EditorIDFilter(record)
             && NameFilter(record)
             && record.Responses.Any(InfoFilter);
@@ -71,61 +71,17 @@ namespace ConversationsRaiseSpeechcraft
                 .Where(InfoFilter)];
         }
 
-        private static void PackageInfoOverrides(ref DialogTopic dial, Dictionary<FormKey, List<IDialogResponsesGetter>> groups, HashSet<FormKey> duplicates)
+        private static void PackageInfoOverrides(DialogTopic dial, Dictionary<FormKey, List<IDialogResponsesGetter>> groups, HashSet<FormKey> duplicates)
         {
             var groupGetter = groups[dial.FormKey];
             dial.Responses.Clear();
-            dial.Responses.Add(groupGetter.Where(i => !duplicates.Contains(i.FormKey)).Select(i => i.DeepCopy()));
+            if (dial.Name is null)
+                dial.Responses.Add(groupGetter.Where(i => !duplicates.Contains(i.FormKey) && i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null && i.Prompt is not null).Select(i => i.DeepCopy()));
+            else
+                dial.Responses.Add(groupGetter.Where(i => !duplicates.Contains(i.FormKey) && i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null).Select(i => i.DeepCopy()));
         }
 
-        private static IFormLink<IMessageGetter> ConstructMessage(ISkyrimMod patchMod)
-        {
-            var mesg = new Message(patchMod)
-            {
-                EditorID = "ANDR_CRS_EXPGainedMessage",
-                Description = "Your skill in Speech has increased.",
-                DisplayTime = 2
-            };
-            return mesg.ToLink<IMessageGetter>();
-        }
-
-        private static IFormLink<IQuestGetter> ConstructQuest(ISkyrimMod patchMod, int dialCount)
-        {
-            var qust = new Quest(patchMod)
-            {
-                EditorID = "ANDR_CRS_Quest",
-                Name = "ANDR_CRS_Quest",
-                VirtualMachineAdapter = new QuestAdapter()
-                {
-                    Scripts = [new ScriptEntry {
-                        Name = "ANDR_CRS_QuestScript",
-                        Flags = 0,
-                        Properties = [new ScriptBoolListProperty{
-                            Name = "ConversationBool",
-                            Flags = ScriptProperty.Flag.Edited,
-                            Data = [.. new bool[dialCount]]
-                        }]
-                    }]
-                },
-                Flags = Quest.Flag.StartGameEnabled,
-                Priority = 0,
-                Type = Quest.TypeEnum.Misc,
-                NextAliasID = 0
-            };
-            return qust.ToLink<IQuestGetter>();
-        }
-
-        private static IFormLink<IGlobalGetter> ConstructGlobal(ISkyrimMod patchMod)
-        {
-            var glob = new GlobalShort(patchMod)
-            {
-                EditorID = "ANDR_CRS_EXPGainGlobal_Medium",
-                Data = 50
-            };
-            return glob.ToLink<IGlobalGetter>();
-        }
-
-        private static void PatchInfo(DialogResponses info, IFormLink<IMessageGetter> mesg, IFormLink<IQuestGetter> qust, IFormLink<IGlobalGetter> glob)
+        private static void PatchInfo(DialogResponses info, IFormLink<IMessageGetter> mesg, IFormLink<IQuestGetter> qust, IFormLink<IGlobalGetter> glob, int convsersationIndex)
         {
             info.VirtualMachineAdapter ??= new DialogResponsesAdapter { };
             info.VirtualMachineAdapter.ScriptFragments ??= new ScriptFragments { };
@@ -140,7 +96,7 @@ namespace ConversationsRaiseSpeechcraft
                 }, new ScriptIntProperty {
                     Name = "ANDR_CRS_Index",
                     Flags = ScriptProperty.Flag.Edited,
-                    Data = 2
+                    Data = convsersationIndex
                 }, new ScriptObjectProperty {
                     Name = "ANDR_CRS_Quest",
                     Flags = ScriptProperty.Flag.Edited,
@@ -151,12 +107,12 @@ namespace ConversationsRaiseSpeechcraft
                     Object = glob
                 }]
             });
-            if (info.VirtualMachineAdapter.ScriptFragments != null)
-                info.VirtualMachineAdapter.ScriptFragments.OnEnd = new ScriptFragment
-                {
-                    ScriptName = "ANDR_CRS_DialogueXPScript",
-                    FragmentName = "Fragment_0"
-                };
+            info.VirtualMachineAdapter.ScriptFragments.FileName = "ANDR_CRS_DialogueXPScript";
+            info.VirtualMachineAdapter.ScriptFragments.OnEnd = new ScriptFragment
+            {
+                ScriptName = "ANDR_CRS_DialogueXPScript",
+                FragmentName = "Fragment_0",
+            };
         }
 
         private static HashSet<FormKey> DetectDuplicates(Dictionary<FormKey, List<IDialogResponsesGetter>> groups)
@@ -183,9 +139,6 @@ namespace ConversationsRaiseSpeechcraft
             Console.WriteLine($"Found {subrecordCount} INFO subrecords to be patched");
 
             var duplicates = DetectDuplicates(groupRecords);
-            var message = ConstructMessage(patchMod);
-            var quest = ConstructQuest(patchMod, dialRecords.Count);
-            var global = ConstructGlobal(patchMod);
 
             if (duplicates.Count != 0)
                 Console.WriteLine("Warning, duplicate records found. These records cannot be patched.");
@@ -195,13 +148,67 @@ namespace ConversationsRaiseSpeechcraft
                 Console.WriteLine($"{formKey.IDString()} found in {string.Join(", ", records)}");
             }
 
+            var patchRecords = new List<DialogTopic>();
             foreach (var record in dialRecords)
             {
                 var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
-                PackageInfoOverrides(ref dial, groupRecords, duplicates);
-                foreach (var info in dial.Responses)
-                    PatchInfo(info, message, quest, global);
+                PackageInfoOverrides(dial, groupRecords, duplicates);
+                patchRecords.Add(dial);
             }
+
+            var patchedInfoCount = 0;
+            foreach (var record in patchRecords)
+                patchedInfoCount += record.Responses.Count;
+
+            var message = new Message(patchMod)
+            {
+                EditorID = "ANDR_CRS_EXPGainedMessage",
+                Description = "Your skill in Speech has increased.",
+                DisplayTime = 2
+            };
+            var global = new GlobalShort(patchMod)
+            {
+                EditorID = "ANDR_CRS_EXPGainGlobal_Medium",
+                Data = 50
+            };
+            var quest = new Quest(patchMod)
+            {
+                EditorID = "ANDR_CRS_Quest",
+                Name = "ANDR_CRS_Quest",
+                VirtualMachineAdapter = new QuestAdapter()
+                {
+                    Scripts = [new ScriptEntry {
+                        Name = "ANDR_CRS_QuestScript",
+                        Flags = 0,
+                        Properties = [new ScriptBoolListProperty{
+                            Name = "ConversationBool",
+                            Flags = ScriptProperty.Flag.Edited,
+                            Data = [.. new bool[patchedInfoCount]]
+                        }]
+                    }]
+                },
+                Flags = Quest.Flag.StartGameEnabled,
+                Priority = 0,
+                Type = Quest.TypeEnum.Misc,
+                NextAliasID = 0
+            };
+
+            patchMod.Messages.Add(message);
+            patchMod.Globals.Add(global);
+            patchMod.Quests.Add(quest);
+
+            var messageLink = message.ToLink<IMessageGetter>();
+            var globalLink = global.ToLink<IGlobalGetter>();
+            var questLink = quest.ToLink<IQuestGetter>();
+
+            var convsersationIndex = 0;
+            foreach (var dial in patchRecords)
+                foreach (var info in dial.Responses)
+                {
+                    PatchInfo(info, messageLink, questLink, globalLink, convsersationIndex);
+                    convsersationIndex++;
+                }
+            Console.WriteLine($"Patched {convsersationIndex} INFO subrecords");
         }
     }
 }
