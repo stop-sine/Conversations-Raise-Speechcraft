@@ -17,6 +17,61 @@ namespace ConversationsRaiseSpeechcraft
 {
     public class Program
     {
+        private static readonly List<FormLink<IQuestGetter>> QuestExclusions = [
+            Skyrim.Quest.VoicePowers,
+            Skyrim.Quest.stables,
+            Skyrim.Quest.DialogueGeneric,
+            Skyrim.Quest.DialogueCrimeGuards,
+            Skyrim.Quest.DialogueCrimeOrcs,
+            Skyrim.Quest.DialogueCarriageSystem,
+            Skyrim.Quest.DialogueFollower,
+            Skyrim.Quest.DGIntimidateQuest,
+            Skyrim.Quest.WICourier,
+            Skyrim.Quest.WICastMagic01,
+            Skyrim.Quest.WICastMagic02,
+            Skyrim.Quest.WICastMagic03,
+            Skyrim.Quest.WICastMagic04,
+            Skyrim.Quest.WICastMagicNonHostileSpell01,
+            Skyrim.Quest.WIKill02,
+            Skyrim.Quest.WIKill04,
+            Skyrim.Quest.WIKill04RivalDialgoue,
+            Skyrim.Quest.WIAssault01,
+            Skyrim.Quest.WIAddItem01,
+            Skyrim.Quest.WIRemoveItem01,
+            Skyrim.Quest.WIDeadBody01,
+            Skyrim.Quest.WIChangeLocation08,
+            Skyrim.Quest.RelationshipMarriage,
+            Skyrim.Quest.RelationshipMarriageBreakUp,
+            Skyrim.Quest.RelationshipMarriageWedding,
+            Skyrim.Quest.RelationshipMarriageFIN,
+            Skyrim.Quest.CW,
+            Skyrim.Quest.CR00,
+            Skyrim.Quest.CR01,
+            Skyrim.Quest.CR02,
+            Skyrim.Quest.CR03,
+            Skyrim.Quest.CR04,
+            Skyrim.Quest.CR05,
+            Skyrim.Quest.CR06,
+            Skyrim.Quest.CR07,
+            Skyrim.Quest.CR08,
+            Skyrim.Quest.CR09,
+            Skyrim.Quest.CR10,
+            Skyrim.Quest.CR11,
+            Skyrim.Quest.CR12,
+            Skyrim.Quest.CR13,
+            Skyrim.Quest.CR14,
+            Skyrim.Quest.HousePurchase,
+            HearthFires.Quest.BYOHHouseBuilding,
+            HearthFires.Quest.BYOHHousePale,
+            HearthFires.Quest.BYOHHouseFalkreath,
+            HearthFires.Quest.BYOHHouseHjaalmarch,
+            HearthFires.Quest.BYOHRelationshipAdoptable,
+            HearthFires.Quest.BYOHRelationshipAdoptableOrphanage,
+            HearthFires.Quest.BYOHRelationshipAdoptableOrphanageCL,
+            HearthFires.Quest.BYOHRelationshipAdoptableUrchins,
+            HearthFires.Quest.BYOHRelationshipAdoptableStewardCourier,
+            HearthFires.Quest.BYOHRelationshipAdoption,
+        ];
 
         public static async Task<int> Main(string[] args)
         {
@@ -26,59 +81,22 @@ namespace ConversationsRaiseSpeechcraft
                 .Run(args);
         }
 
-        private static bool EditorIDFilter(IDialogTopicGetter record)
-        {
-            if (record.EditorID != null &&
-            (record.EditorID.Contains("Generic")
-            || record.EditorID.Contains("Shout")
-            || record.EditorID.Contains("Cast"))
-            ) return false;
-            else return true;
-        }
-
         private static bool NameFilter(IDialogTopicGetter record)
         {
-            if (record.Name?.String != null &&
-            (!record.Name.String.Contains(' ')
-            || record.Name.String.Contains("(Invisible Continue)")
-            || record.Name.String.Contains("(forcegreet)")
-            || record.Name.String.Contains("(remain silent)"))
-            ) return false;
-            else return true;
+            var name = record.Name?.String;
+            if (string.IsNullOrWhiteSpace(name) || !name.Contains(' ', StringComparison.OrdinalIgnoreCase)) return false;
+            if (name.First() == '(' && name.Last() == ')') return false;
+            return true;
         }
 
         private static bool DialogFilter(IDialogTopicGetter record)
         {
-            return record.Responses.Count > 0
-            && (record.Name is not null || record.Responses.Any(i => i.Prompt is not null && i.Prompt?.String != " "))
-            && EditorIDFilter(record)
-            && NameFilter(record)
-            && record.Responses.Any(InfoFilter);
-        }
-
-        private static bool InfoFilter(IDialogResponsesGetter info)
-        {
-            return info.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null;
-        }
-
-        private static List<IDialogResponsesGetter> CollectGroups(Mutagen.Bethesda.Plugins.Cache.ILinkCache<ISkyrimMod, ISkyrimModGetter> cache, IDialogTopicGetter record)
-        {
-            var recordCollection = record.FormKey.ToLinkGetter<IDialogTopicGetter>().ResolveAll(cache);
-            return [.. recordCollection
-                .SelectMany(dial => dial.Responses)
-                .GroupBy(info => info.FormKey)
-                .Select(g => g.First())
-                .Where(InfoFilter)];
-        }
-
-        private static void PackageInfoOverrides(DialogTopic dial, Dictionary<FormKey, List<IDialogResponsesGetter>> groups, HashSet<FormKey> duplicates)
-        {
-            var groupGetter = groups[dial.FormKey];
-            dial.Responses.Clear();
-            if (dial.Name is null)
-                dial.Responses.Add(groupGetter.Where(i => !duplicates.Contains(i.FormKey) && i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null && i.Prompt is not null).Select(i => i.DeepCopy()));
-            else
-                dial.Responses.Add(groupGetter.Where(i => !duplicates.Contains(i.FormKey) && i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null).Select(i => i.DeepCopy()));
+            if (QuestExclusions.Contains(record.Quest.FormKey)) return false;
+            if (record.Responses.Count == 0) return false;
+            if (record.Name is not null && !NameFilter(record)) return false;
+            if (record.Name is null && record.Responses.All(i => string.IsNullOrWhiteSpace(i.Prompt?.String))) return false;
+            if (!record.Responses.Any(i => i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null)) return false;
+            return true;
         }
 
         private static void PatchInfo(DialogResponses info, IFormLink<IMessageGetter> mesg, IFormLink<IQuestGetter> qust, IFormLink<IGlobalGetter> glob, int convsersationIndex)
@@ -115,63 +133,42 @@ namespace ConversationsRaiseSpeechcraft
             };
         }
 
-        private static HashSet<FormKey> DetectDuplicates(Dictionary<FormKey, List<IDialogResponsesGetter>> groups)
-        {
-            var allInfos = groups.Values.SelectMany(x => x).ToList();
-            var duplicates = allInfos.Duplicates(x => x.FormKey).Select(x => x.FormKey).ToHashSet();
-            return duplicates;
-        }
-
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             var cache = state.LinkCache;
-            var patchMod = state.PatchMod;
-            var dialRecords = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().Where(DialogFilter).ToList();
-            var groupRecords = dialRecords.ToDictionary(
-                d => d.FormKey,
-                d => CollectGroups(cache, d));
+            var patch = state.PatchMod;
 
-            var modkeys = dialRecords.Select(r => r.FormKey.ModKey);
-            Console.WriteLine($"Found {dialRecords.Count} DIAL records in {modkeys.Distinct().Count()} plugins");
-            var subrecordCount = 0;
-            foreach (var group in groupRecords.Values)
-                subrecordCount += group.Count;
-            Console.WriteLine($"Found {subrecordCount} INFO subrecords to be patched");
+            var records = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().Where(DialogFilter).ToList();
 
-            var duplicates = DetectDuplicates(groupRecords);
-
-            if (duplicates.Count != 0)
-                Console.WriteLine("Warning, duplicate records found. These records cannot be patched.");
-            foreach (var formKey in duplicates)
+            var patchRecords = new Dictionary<IDialogTopicGetter, List<IDialogResponsesGetter>>();
+            foreach (var record in records)
             {
-                var records = groupRecords.Where(x => x.Value.Any(y => y.FormKey == formKey)).Select(z => z.Key);
-                Console.WriteLine($"{formKey.IDString()} found in {string.Join(", ", records)}");
+                var overrides = record.FormKey.ToLinkGetter<IDialogTopicGetter>().ResolveAll(cache).ToList();
+                var responses = overrides.SelectMany(d => d.Responses).GroupBy(i => i.FormKey).Select(g => g.First()).Where(i => i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null).ToList();
+                if (record.Name?.String is null)
+                    responses = [.. responses.Where(i => i.Prompt is not null)];
+                patchRecords.Add(record, responses);
             }
 
-            var patchRecords = new List<DialogTopic>();
-            foreach (var record in dialRecords)
-            {
-                var dial = patchMod.DialogTopics.GetOrAddAsOverride(record);
-                PackageInfoOverrides(dial, groupRecords, duplicates);
-                patchRecords.Add(dial);
-            }
+            var uniqueFormkeys = patchRecords.SelectMany(r => r.Value).Select(i => i.FormKey).Distinct().ToList();
+            patchRecords = patchRecords.Where(r => r.Value.All(i => uniqueFormkeys.Contains(i.FormKey))).ToDictionary(r => r.Key, r => r.Value);
 
             var patchedInfoCount = 0;
             foreach (var record in patchRecords)
-                patchedInfoCount += record.Responses.Count;
+                patchedInfoCount += record.Value.Count;
 
-            var message = new Message(patchMod)
+            var message = new Message(patch)
             {
                 EditorID = "ANDR_CRS_EXPGainedMessage",
                 Description = "Your skill in Speech has increased.",
                 DisplayTime = 2
             };
-            var global = new GlobalShort(patchMod)
+            var global = new GlobalShort(patch)
             {
                 EditorID = "ANDR_CRS_EXPGainGlobal_Medium",
                 Data = 50
             };
-            var quest = new Quest(patchMod)
+            var quest = new Quest(patch)
             {
                 EditorID = "ANDR_CRS_Quest",
                 Name = "ANDR_CRS_Quest",
@@ -193,21 +190,25 @@ namespace ConversationsRaiseSpeechcraft
                 NextAliasID = 0
             };
 
-            patchMod.Messages.Add(message);
-            patchMod.Globals.Add(global);
-            patchMod.Quests.Add(quest);
-
+            patch.Messages.Add(message);
+            patch.Globals.Add(global);
+            patch.Quests.Add(quest);
             var messageLink = message.ToLink<IMessageGetter>();
             var globalLink = global.ToLink<IGlobalGetter>();
             var questLink = quest.ToLink<IQuestGetter>();
 
             var convsersationIndex = 0;
-            foreach (var dial in patchRecords)
+            foreach (var record in patchRecords)
+            {
+                var dial = patch.DialogTopics.GetOrAddAsOverride(record.Key);
+                foreach (var response in record.Value)
+                    dial.Responses.Add(response.DeepCopy());
                 foreach (var info in dial.Responses)
                 {
                     PatchInfo(info, messageLink, questLink, globalLink, convsersationIndex);
                     convsersationIndex++;
                 }
+            }
             Console.WriteLine($"Patched {convsersationIndex} INFO subrecords");
         }
     }
