@@ -97,6 +97,9 @@ namespace ConversationsRaiseSpeechcraft
             var name = record.Name?.String;
             if (string.IsNullOrWhiteSpace(name) || CountWords(name) <= 3) return false;
             if (name.First() == '(' && name.Last() == ')') return false;
+            if (name.Contains("(Invisible Continue)", StringComparison.OrdinalIgnoreCase)) return false;
+            if (name.Contains("(Remain silent)", StringComparison.OrdinalIgnoreCase)) return false;
+            if (name.Contains("(forcegreet)", StringComparison.OrdinalIgnoreCase)) return false;
             if (name.Contains("gold)", StringComparison.OrdinalIgnoreCase)) return false;
             if (name.Contains("Septims)", StringComparison.OrdinalIgnoreCase)) return false;
             if (name.Contains("(Persuade", StringComparison.OrdinalIgnoreCase)) return false;
