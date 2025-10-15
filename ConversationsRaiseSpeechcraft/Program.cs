@@ -28,6 +28,7 @@ namespace ConversationsRaiseSpeechcraft
             Skyrim.Quest.DialogueFollower,
             Skyrim.Quest.HirelingQuest,
             Skyrim.Quest.DGIntimidateQuest,
+            Skyrim.Quest.WEBountyCollectorQST,
             Skyrim.Quest.WICourier,
             Skyrim.Quest.WICastMagic01,
             Skyrim.Quest.WICastMagic02,
