@@ -1,16 +1,18 @@
+using System.Data;
+using System.Text.RegularExpressions;
+using Noggog;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.Skyrim;
-using Noggog;
 using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Records;
-using System.Data;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
+
 
 
 namespace ConversationsRaiseSpeechcraft
 {
-    public class Program
+    public partial class Program
     {
         private static readonly List<FormLink<IQuestGetter>> QuestExclusions = [
             Skyrim.Quest.VoicePowers,
@@ -20,6 +22,7 @@ namespace ConversationsRaiseSpeechcraft
             Skyrim.Quest.DialogueCrimeOrcs,
             Skyrim.Quest.DialogueCarriageSystem,
             Dawnguard.Quest.DLC1DialogueFerrySystem,
+            FormKey.Factory("00EA7B:cckrtsse001_altar.esl"),
             Skyrim.Quest.DialogueFollower,
             Skyrim.Quest.HirelingQuest,
             Skyrim.Quest.DGIntimidateQuest,
@@ -72,6 +75,7 @@ namespace ConversationsRaiseSpeechcraft
             HearthFires.Quest.BYOHRelationshipAdoptableUrchins,
             HearthFires.Quest.BYOHRelationshipAdoptableStewardCourier,
             HearthFires.Quest.BYOHRelationshipAdoption,
+            FormKey.Factory("0010C3:ccbgssse025-advdsgs.esm")
         ];
 
         public static async Task<int> Main(string[] args)
@@ -82,11 +86,21 @@ namespace ConversationsRaiseSpeechcraft
                 .Run(args);
         }
 
+        public static int CountWords(string s)
+        {
+            MatchCollection collection = MyRegex().Matches(s);
+            return collection.Count;
+        }
+
         private static bool NameFilter(IDialogTopicGetter record)
         {
             var name = record.Name?.String;
-            if (string.IsNullOrWhiteSpace(name) || !name.Contains(' ', StringComparison.OrdinalIgnoreCase)) return false;
+            if (string.IsNullOrWhiteSpace(name) || CountWords(name) <= 3) return false;
             if (name.First() == '(' && name.Last() == ')') return false;
+            if (name.Contains("gold)", StringComparison.OrdinalIgnoreCase)) return false;
+            if (name.Contains("Septims)", StringComparison.OrdinalIgnoreCase)) return false;
+            if (name.Contains("(Persuade", StringComparison.OrdinalIgnoreCase)) return false;
+            if (name.Contains("(Intimidate)", StringComparison.OrdinalIgnoreCase)) return false;
             return true;
         }
 
@@ -140,7 +154,6 @@ namespace ConversationsRaiseSpeechcraft
             var patch = state.PatchMod;
 
             var records = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().Where(DialogFilter).ToList();
-
             var patchRecords = new Dictionary<IDialogTopicGetter, List<IDialogResponsesGetter>>();
             foreach (var record in records)
             {
@@ -212,5 +225,8 @@ namespace ConversationsRaiseSpeechcraft
             }
             Console.WriteLine($"Patched {convsersationIndex} INFO subrecords");
         }
+
+        [GeneratedRegex(@"[\S]+")]
+        private static partial Regex MyRegex();
     }
 }
