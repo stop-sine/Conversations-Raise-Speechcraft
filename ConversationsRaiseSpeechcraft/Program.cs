@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text.RegularExpressions;
+using DynamicData.Kernel;
 using Noggog;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
@@ -117,6 +118,13 @@ namespace ConversationsRaiseSpeechcraft
             return true;
         }
 
+        private static HashSet<FormKey> DetectDuplicates(Dictionary<IDialogTopicGetter, List<IDialogResponsesGetter>> groups)
+        {
+            var allInfos = groups.Values.SelectMany(x => x).ToList();
+            var duplicates = allInfos.Duplicates(x => x.FormKey).Select(x => x.FormKey).ToHashSet();
+            return duplicates;
+        }
+
         private static void PatchInfo(DialogResponses info, IFormLink<IMessageGetter> mesg, IFormLink<IQuestGetter> qust, IFormLink<IGlobalGetter> glob, int convsersationIndex)
         {
             info.VirtualMachineAdapter ??= new DialogResponsesAdapter { };
@@ -167,8 +175,8 @@ namespace ConversationsRaiseSpeechcraft
                 patchRecords.Add(record, responses);
             }
 
-            var uniqueFormkeys = patchRecords.SelectMany(r => r.Value).Select(i => i.FormKey).Distinct().ToList();
-            patchRecords = patchRecords.Where(r => r.Value.All(i => uniqueFormkeys.Contains(i.FormKey))).ToDictionary(r => r.Key, r => r.Value);
+            var duplicates = DetectDuplicates(patchRecords);
+            patchRecords = patchRecords.Where(r => r.Value.All(i => !duplicates.Contains(i.FormKey))).ToDictionary(r => r.Key, r => r.Value);
 
             var patchedInfoCount = 0;
             foreach (var record in patchRecords)
