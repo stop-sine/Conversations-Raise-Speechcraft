@@ -9,8 +9,6 @@ using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Records;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
 
-
-
 namespace ConversationsRaiseSpeechcraft
 {
     public partial class Program
@@ -230,6 +228,7 @@ namespace ConversationsRaiseSpeechcraft
             foreach (var record in patchRecords)
             {
                 var dial = patch.DialogTopics.GetOrAddAsOverride(record.Key);
+                dial.Responses.Clear();
                 foreach (var response in record.Value)
                     dial.Responses.Add(response.DeepCopy());
                 foreach (var info in dial.Responses)
