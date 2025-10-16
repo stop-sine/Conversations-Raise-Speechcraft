@@ -213,10 +213,6 @@ namespace ConversationsRaiseSpeechcraft
                 NextAliasID = 0
             };
 
-            Console.WriteLine(message.FormKey);
-            Console.WriteLine(global.FormKey);
-            Console.WriteLine(quest.FormKey);
-
             patch.Messages.Add(message);
             patch.Globals.Add(global);
             patch.Quests.Add(quest);
