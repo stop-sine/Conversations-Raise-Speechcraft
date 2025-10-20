@@ -14,6 +14,10 @@ namespace ConversationsRaiseSpeechcraft
     public partial class Program
     {
         private static readonly List<FormLink<IQuestGetter>> QuestExclusions = [
+            Skyrim.Quest.MQ101,
+            Skyrim.Quest.MQ102,
+            FormKey.Factory("000DAF:alternate start - live another life.esp"),
+            FormKey.Factory("07A334:alternate start - live another life.esp"),
             Skyrim.Quest.VoicePowers,
             Skyrim.Quest.stables,
             Skyrim.Quest.DialogueGeneric,
@@ -75,8 +79,8 @@ namespace ConversationsRaiseSpeechcraft
             HearthFires.Quest.BYOHRelationshipAdoptableStewardCourier,
             HearthFires.Quest.BYOHRelationshipAdoption,
             FormKey.Factory("0010C3:ccbgssse025-advdsgs.esm")
-        ];
 
+        ];
         public static async Task<int> Main(string[] args)
         {
             return await SynthesisPipeline.Instance
