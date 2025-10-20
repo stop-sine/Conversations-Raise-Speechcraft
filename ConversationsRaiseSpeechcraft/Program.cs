@@ -81,6 +81,7 @@ namespace ConversationsRaiseSpeechcraft
             FormKey.Factory("0010C3:ccbgssse025-advdsgs.esm")
 
         ];
+
         public static async Task<int> Main(string[] args)
         {
             return await SynthesisPipeline.Instance
@@ -116,7 +117,7 @@ namespace ConversationsRaiseSpeechcraft
             if (record.Responses.Count == 0) return false;
             if (record.Name is not null && !NameFilter(record)) return false;
             if (record.Name is null && record.Responses.All(i => string.IsNullOrWhiteSpace(i.Prompt?.String))) return false;
-            if (!record.Responses.Any(i => i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null)) return false;
+            if (record.Responses.All(i => i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is not null && i.VirtualMachineAdapter?.ScriptFragments?.OnBegin is not null)) return false;
             return true;
         }
 
@@ -171,7 +172,15 @@ namespace ConversationsRaiseSpeechcraft
             foreach (var record in records)
             {
                 var overrides = record.FormKey.ToLinkGetter<IDialogTopicGetter>().ResolveAll(cache).ToList();
-                var responses = overrides.SelectMany(d => d.Responses).GroupBy(i => i.FormKey).Select(g => g.First()).Where(i => i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is null).ToList();
+                var responses = overrides
+                .SelectMany(d => d.Responses)
+                .GroupBy(i => i.FormKey)
+                .Select(g => g.First())
+                .Where(i => i.VirtualMachineAdapter?
+                .ScriptFragments?.OnBegin is null)
+                .Where(i => i.VirtualMachineAdapter?
+                .ScriptFragments?.OnEnd is null)
+                .ToList();
                 if (record.Name?.String is null)
                     responses = [.. responses.Where(i => i.Prompt is not null)];
                 patchRecords.Add(record, responses);
