@@ -87,7 +87,16 @@ namespace ConversationsRaiseSpeechcraft
             "shared",
             "marriage",
             "hireling",
-            "info"
+            "info",
+            "carriage",
+            "ferry",
+            "home",
+            "mount",
+            "horse",
+            "stable",
+            "tutorial",
+            "relationship",
+            "crime"
         ];
 
         public static async Task<int> Main(string[] args)
