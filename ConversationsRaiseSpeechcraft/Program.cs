@@ -186,7 +186,7 @@ namespace ConversationsRaiseSpeechcraft
             var patch = state.PatchMod;
 
             var records = state.LoadOrder.PriorityOrder.DialogTopic().WinningOverrides().Where(DialogFilter).ToList();
-            records = [.. records.Where(r => !QuestEditorIDExclusions.Any(exclusion => r.Quest.Resolve(cache).EditorID?.Contains(exclusion, StringComparison.OrdinalIgnoreCase) == true))];
+            records = [.. records.Where(r => r.Quest is not null && !QuestEditorIDExclusions.Any(exclusion => r.Quest.Resolve(cache).EditorID?.Contains(exclusion, StringComparison.OrdinalIgnoreCase) == true))];
             var patchRecords = new Dictionary<IDialogTopicGetter, List<IDialogResponsesGetter>>();
             foreach (var record in records)
             {
