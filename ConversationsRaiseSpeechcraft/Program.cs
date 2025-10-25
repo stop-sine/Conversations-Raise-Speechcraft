@@ -244,6 +244,7 @@ namespace ConversationsRaiseSpeechcraft
             var convsersationIndex = 0;
             foreach (var record in patchRecords)
             {
+                if (record.Value.Count == 0) continue;
                 var dial = patch.DialogTopics.GetOrAddAsOverride(record.Key);
                 dial.Responses.Clear();
                 foreach (var response in record.Value)
@@ -253,8 +254,8 @@ namespace ConversationsRaiseSpeechcraft
                     PatchInfo(info, messageLink, questLink, globalLink, convsersationIndex);
                     convsersationIndex++;
                 }
-                if (dial.Responses.Count == 0)
-                    patch.DialogTopics.Remove(record.Key);
+
+                patch.DialogTopics.Remove(record.Key);
             }
             Console.WriteLine($"Patched {convsersationIndex} INFO subrecords");
         }
