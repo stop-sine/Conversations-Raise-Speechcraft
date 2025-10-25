@@ -82,6 +82,7 @@ namespace ConversationsRaiseSpeechcraft
         ];
 
         private static readonly List<string> QuestEditorIDExclusions = [
+            "shout",
             "generic",
             "follower",
             "shared",
@@ -90,7 +91,7 @@ namespace ConversationsRaiseSpeechcraft
             "info",
             "carriage",
             "ferry",
-            "home",
+            "house",
             "mount",
             "horse",
             "stable",
@@ -98,7 +99,15 @@ namespace ConversationsRaiseSpeechcraft
             "relationship",
             "crime",
             "cast",
-            "spell"
+            "spell",
+            "mq",
+            "intimidate",
+            "bribe",
+            "persuade",
+            "courier",
+            "cr",
+            "adoption",
+            "cw"
         ];
 
         public static async Task<int> Main(string[] args)
