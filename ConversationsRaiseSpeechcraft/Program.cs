@@ -86,7 +86,7 @@ namespace ConversationsRaiseSpeechcraft
             "follower",
             "shared",
             "marriage",
-            "hirelings",
+            "hireling",
             "info"
         ];
 
@@ -125,6 +125,7 @@ namespace ConversationsRaiseSpeechcraft
             if (record.Responses.Count == 0) return false;
             if (record.Name is not null && !NameFilter(record)) return false;
             if (record.Name is null && record.Responses.All(i => string.IsNullOrWhiteSpace(i.Prompt?.String))) return false;
+            if (record.Responses.Count > 10 && record.Responses.All(i => i.Prompt is null)) return false;
             if (record.Responses.All(i => i.VirtualMachineAdapter?.ScriptFragments?.OnEnd is not null && i.VirtualMachineAdapter?.ScriptFragments?.OnBegin is not null)) return false;
             return true;
         }
