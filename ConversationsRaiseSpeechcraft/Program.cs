@@ -96,7 +96,9 @@ namespace ConversationsRaiseSpeechcraft
             "stable",
             "tutorial",
             "relationship",
-            "crime"
+            "crime",
+            "cast",
+            "spell"
         ];
 
         public static async Task<int> Main(string[] args)
@@ -265,8 +267,6 @@ namespace ConversationsRaiseSpeechcraft
                     PatchInfo(info, messageLink, questLink, globalLink, convsersationIndex);
                     convsersationIndex++;
                 }
-
-                patch.DialogTopics.Remove(record.Key);
             }
             Console.WriteLine($"Patched {convsersationIndex} INFO subrecords");
         }
