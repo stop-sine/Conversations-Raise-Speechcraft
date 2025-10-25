@@ -79,7 +79,15 @@ namespace ConversationsRaiseSpeechcraft
             HearthFires.Quest.BYOHRelationshipAdoptableStewardCourier,
             HearthFires.Quest.BYOHRelationshipAdoption,
             FormKey.Factory("0010C3:ccbgssse025-advdsgs.esm")
+        ];
 
+        private static readonly List<string> QuestEditorIDExclusions = [
+            "generic",
+            "follower",
+            "shared",
+            "marriage",
+            "hirelings",
+            "info"
         ];
 
         public static async Task<int> Main(string[] args)
@@ -245,6 +253,8 @@ namespace ConversationsRaiseSpeechcraft
                     PatchInfo(info, messageLink, questLink, globalLink, convsersationIndex);
                     convsersationIndex++;
                 }
+                if (dial.Responses.Count == 0)
+                    patch.DialogTopics.Remove(record.Key);
             }
             Console.WriteLine($"Patched {convsersationIndex} INFO subrecords");
         }
